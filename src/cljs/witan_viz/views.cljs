@@ -6,6 +6,8 @@
             [witan-viz.views.table-diff :as table-diff]
             [witan-viz.views.table :as table]))
 
+(def pym (.Child js/pym))
+
 (def supported-styles
   #{:table})
 
@@ -25,7 +27,7 @@
 (defmethod visualisation
   :table
   [m]
-  [table/view m])
+  [table/view m pym])
 
 (defn main-panel []
   (let [display (re-frame/subscribe [:display])]

@@ -8,6 +8,7 @@
             [witan-viz.config :as config]
             [taoensso.timbre :as log]))
 
+
 (defn dev-setup []
   (when config/debug?
     (enable-console-print!)
