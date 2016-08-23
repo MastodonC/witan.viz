@@ -55,6 +55,7 @@
      :source-paths ["src/cljs"]
      :compiler     {:main            witan-viz.core
                     :output-to       "resources/public/js/compiled/app.js"
+                    :externs ["../js/externs.js"]
                     :optimizations   :advanced
                     :closure-defines {goog.DEBUG false}
                     :pretty-print    false}}

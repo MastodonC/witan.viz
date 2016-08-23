@@ -6,6 +6,8 @@
             [witan-viz.views.table-diff :as table-diff]
             [witan-viz.views.table :as table]))
 
+(def pym (.Child js/pym))
+
 (def supported-styles
   #{:table})
 
@@ -25,10 +27,13 @@
 (defmethod visualisation
   :table
   [m]
-  [table/view m])
+  [table/view m pym])
 
 (defn main-panel []
   (let [display (re-frame/subscribe [:display])]
+    (.onMessage pym "dataLocation" (fn [data]
+                                     (log/debug "Got request to re-load data" data)
+                                     (re-frame/dispatch [:re-fetch-data data])))
     (fn []
       (let [d @display]
         (if (:ready? d)

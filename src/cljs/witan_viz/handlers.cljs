@@ -8,6 +8,11 @@
    (db/make-db)))
 
 (re-frame/reg-event-db
+ :re-fetch-data
+ (fn  [db [_ data]]
+   (db/remake-db db data)))
+
+(re-frame/reg-event-db
  :got-data
  (fn  [db [_ data]]
    (assoc db :data data)))

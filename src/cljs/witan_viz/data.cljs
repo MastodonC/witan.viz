@@ -108,3 +108,10 @@
           (if (= (count agg') (count datasets))
             (re-frame/dispatch [:got-data agg'])
             (recur agg')))))))
+
+(defn send-ready-message!
+  [pym id]
+  (let [h (.toString (.-offsetHeight (.getElementById js/document id)))]
+    (.sendMessage pym "height" h)
+    (.sendMessage pym "ready" "1") ;; needs a value else regex fail
+    (log/info "Ready sent" h)))
