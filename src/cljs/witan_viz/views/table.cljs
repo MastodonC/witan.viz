@@ -2,7 +2,8 @@
   (:require [re-frame.core :as re-frame]
             [re-com.core :as re-com]
             [taoensso.timbre :as log]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [witan-viz.data :refer [send-ready-message!]]))
 
 ;; document.getElementsByTagName('body')[0].offsetHeight.toString()
 (defn view
@@ -11,9 +12,7 @@
     (r/create-class
      {:component-did-mount
       (fn [this]
-        (let [h (.toString (.-offsetHeight (.getElementById js/document "table")))]
-          (log/debug "HEIGHT" h)
-          (.sendMessage pym "height" h)))
+        (send-ready-message! pym "table"))
       :reagent-render
       (fn []
         (let [{:keys [location data]} (first data)]

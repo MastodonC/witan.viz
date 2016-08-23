@@ -31,6 +31,9 @@
 
 (defn main-panel []
   (let [display (re-frame/subscribe [:display])]
+    (.onMessage pym "dataLocation" (fn [data]
+                                     (log/debug "Got request to re-load data" data)
+                                     (re-frame/dispatch [:re-fetch-data data])))
     (fn []
       (let [d @display]
         (if (:ready? d)

@@ -4,10 +4,8 @@
   (:import goog.Uri))
 
 (defn get-data
-  [qd]
-  (let [a (-> qd
-              (.get "data")
-              (clojure.string/split ","))
+  [data]
+  (let [a (clojure.string/split data ",")
         a' (set (map clojure.string/trim a))]
     (log/info "Data:" a')
     (data/fetch-datasets a')))
@@ -23,6 +21,11 @@
 (defn make-db
   []
   (let [qd (.getQueryData (goog.Uri. (.-location js/window)))]
-    (get-data qd)
+    (get-data (.get qd "data"))
     {:data nil
      :style (get-style qd)}))
+
+(defn remake-db
+  [db data]
+  (get-data data)
+  (assoc db :data nil))
