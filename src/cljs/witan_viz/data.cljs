@@ -5,7 +5,8 @@
             [cljs.core.async :as async]
             [witan.gateway.schema :as wgs]
             [chord.client :refer [ws-ch]]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [witan-viz.filter :as f])
 
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
                    [witan-viz.env :as env :refer [cljs-env]]))
@@ -21,6 +22,27 @@
   [data]
   (map #(str/split % #",")
        (str/split data #"\n")))
+
+(defn get-response-handler
+  [original-location response]
+  (let [ch (get @data-results original-location)]
+    (if ch
+      (go (>! ch (hash-map :location original-location :data (read-csv response))))
+      (log/debug "H!?!??!?!" original-location @data-results))))
+
+(defn get-error-response-handler
+  [original-location response]
+  (log/error response)
+  (let [ch (get @data-results original-location)]
+    (if ch
+      (go (>! ch (hash-map :location original-location :error response)))
+      (log/debug "E!?!??!?!" original-location @data-results))))
+
+(defn download-csv
+  [original-location url]
+  (GET url
+       {:handler (partial get-response-handler original-location)
+        :error-handler (partial get-error-response-handler original-location)}))
 
 (defmulti handle-server-message
   (fn [{:keys [message/type]}] type))
@@ -39,20 +61,8 @@
   [{:keys [event/key event/params] :as event}]
   (when (= :workspace/result-url-created key)
     (let [{:keys [workspace/result-url
-                  workspace/original-location]} params
-          handler (fn [response]
-                    (let [ch (get @data-results original-location)]
-                      (if ch
-                        (go (>! ch (hash-map :location original-location :data (read-csv response))))
-                        (log/debug "H!?!??!?!" original-location @data-results))))
-          error-handler (fn [response]
-                          (log/error response)
-                          (let [ch (get @data-results original-location)]
-                            (if ch
-                              (go (>! ch (hash-map :location original-location :error response)))
-                              (log/debug "E!?!??!?!" original-location @data-results))))]
-      (GET result-url  {:handler handler
-                        :error-handler error-handler}))))
+                  workspace/original-location]} params]
+      (download-csv original-location result-url))))
 
 (defn command!
   [command-key version params]
@@ -91,27 +101,37 @@
 (defn fetch-dataset
   [{:keys [location ch]}]
   (swap! data-results assoc location ch)
-  (command! :workspace/create-result-url "1.0.0" {:workspace/result-location location}))
+  (if (.startsWith location "http")
+    (download-csv location location)
+    (command! :workspace/create-result-url "1.0.0" {:workspace/result-location location})))
 
 (defn fetch-datasets
-  [datasets]
+  [datasets {:keys [filters]}]
   (if-not (coll? datasets)
     (fetch-datasets [datasets])
     (let [_ (when-not @ws-conn (connect!))
-          payloads (map #(hash-map :location % :ch (async/chan)) datasets)
+          payloads (map-indexed (fn [i ds]
+                                  (let [grps (re-find #"^(.*)::(.+)$" ds)
+                                        id (or (nth grps 1) i)
+                                        ds (or (nth grps 2) ds)]
+                                    (hash-map :id (if (clojure.string/blank? id) i id)
+                                              :location ds
+                                              :ch (async/chan)))) datasets)
           out (async/merge (map :ch payloads))]
       (run! fetch-dataset payloads)
-      (go-loop [agg []]
+      (go-loop [agg {}]
         (let [{:keys [location data error] :as result} (async/<! out)
-              agg' (conj agg result)]
-          (log/debug "Got result from" location)
+              id (some #(when (= location (:location %)) (:id %)) payloads)
+              agg' (merge agg {id result})]
+          (log/debug "Got result from" id location)
           (if (= (count agg') (count datasets))
-            (re-frame/dispatch [:got-data agg'])
+            (let [result (into {} (map (fn [[k v]]
+                                         {k (f/apply-filters filters k v)}) agg'))]
+              (re-frame/dispatch [:got-data result]))
             (recur agg')))))))
 
 (defn send-ready-message!
-  [pym id]
-  (let [h (.toString (.-offsetHeight (.getElementById js/document id)))]
-    (.sendMessage pym "height" h)
-    (.sendMessage pym "ready" "1") ;; needs a value else regex fail
-    (log/info "Ready sent" h)))
+  [pym h]
+  (.sendMessage pym "height" h)
+  (.sendMessage pym "ready" "1") ;; needs a value else regex fail
+  (log/info "Ready sent" h))

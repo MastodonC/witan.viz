@@ -11,16 +11,20 @@
                  [cljs-ajax "0.5.8"]
                  [jarohen/chord "0.7.0"]
                  [environ "1.0.2"]
-                 [witan.gateway.schema "0.1.1"]]
+                 [witan.gateway.schema "0.1.1"]
+                 [thi.ng/geom "0.0.908"]]
   :plugins [[lein-cljsbuild "1.1.3"]
             [lein-garden "0.2.8"]]
 
   :min-lein-version "2.5.3"
 
   :source-paths ["src/clj"]
+  :repl-options {:init-ns user}
 
-  :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"
+  :clean-targets ^{:protect false} ["resources/public/js/compiled"
+                                    "target"
                                     "test/js"
+                                    "out"
                                     "resources/public/css"]
 
   :figwheel {:css-dirs ["resources/public/css"]
@@ -34,11 +38,16 @@
 
   :profiles
   {:dev
-   {:dependencies []
-
+   {:dependencies [[com.cemerick/piggieback "0.2.1"]
+                   [org.clojure/tools.nrepl "0.2.12"]
+                   [ring/ring-defaults "0.1.5"]
+                   [compojure "1.4.0"]
+                   [figwheel "0.5.4-3"]
+                   [figwheel-sidecar "0.5.4-3"]]
+    :source-paths ["dev-src"]
+    :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
     :plugins      [[lein-figwheel "0.5.4-3"]
-                   [lein-doo "0.1.6"]]
-    }}
+                   [lein-doo "0.1.6"]]}}
 
   :cljsbuild
   {:builds
