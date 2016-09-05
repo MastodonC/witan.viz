@@ -13,4 +13,10 @@
     (is (= (vec
             (db/get-filters
              (db/get-query-data (make-url "?filter=foo%3Dbar"))))
-           [(f/Filter. nil "foo" "=" "bar")]))))
+           [(f/Filter. nil "foo" "=" "bar")])))
+  (testing "multiple filters ="
+    (is (= (vec
+            (db/get-filters
+             (db/get-query-data (make-url "?filter=foo%3Dbar,baz%3Cqux"))))
+           [(f/Filter. nil "foo" "=" "bar")
+            (f/Filter. nil "baz" "<" "qux")]))))
