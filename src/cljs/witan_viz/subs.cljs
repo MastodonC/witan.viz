@@ -7,4 +7,4 @@
  (fn [db]
    (merge
     {:ready? (-> (:data db) nil? not)}
-    (select-keys db [:data :style]))))
+    db)))
