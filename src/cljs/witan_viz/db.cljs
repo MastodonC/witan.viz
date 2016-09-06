@@ -1,7 +1,8 @@
 (ns witan-viz.db
   (:require [taoensso.timbre  :as log]
             [witan-viz.data   :as data]
-            [witan-viz.filter :as f])
+            [witan-viz.filter :as f]
+            [goog.string      :as gstr])
   (:import [goog.Uri QueryData]))
 
 (defn get-query-data
@@ -52,7 +53,7 @@
         (->> qd
              (.getKeys)
              (js->clj)
-             (filter #(.startsWith % "args"))
+             (filter #(gstr/caseInsensitiveStartsWith % "args"))
              (map #(hash-map (->> %
                                   (re-find #"\[(.+)\]")
                                   (last)
