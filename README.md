@@ -6,7 +6,7 @@ A ClojureScript application for visualising data.
 ### data
 **Format** <key> / <label>:<key>
 **Info** Data without a label will automatically be given an the index in which it appears in the query as a label. You can also specify a direct link, rather than a datastore ID.
-**Example** `?data=foo::c5f04c81-1eb3-4d30-839f-eef6fc1a6b6d/20160822T125438Z/population.csv`
+**Example** `?data=foo::20160822T125438Z/population.csv`
 `?data=http://my.server/mydata/population.csv`
 ### style
 **Format** <style>
@@ -28,6 +28,11 @@ A ClojureScript application for visualising data.
 ### Table
 **Argument** dataset
 **Info** Select a dataset *by label* to show in the table. If not found, first dataset will be selected.
+### Line Plot
+**Argument** x
+**Info** Column to use for X axis
+**Argument** y
+**Info** Column to use for Y axis
 
 ## Development Mode
 
