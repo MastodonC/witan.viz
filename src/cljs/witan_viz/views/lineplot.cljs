@@ -43,7 +43,7 @@
 (defn show-tool-tip
   [element]
   (let [tt     (.querySelector js/document "#lineplot #tooltip")
-        mw     (/ (first @chart-dims) 3)
+        mw     (/ (first @chart-dims) 2)
         x      (.-value (.-baseVal (aget (.-target element) "cx")))
         y      (.-value (.-baseVal (aget (.-target element) "cy")))
         data   (.-value (aget (.-attributes (.-target element)) "data-viz-txt"))
@@ -55,7 +55,7 @@
       (aset (.-style tt)
             (if (<= x mw) "left" "right")
             (str (if (<= x mw) x (- (first @chart-dims) x)) "px"))
-      (aset (.-style tt) "top"  (str (- y 32) "px")))))
+      (aset (.-style tt) "bottom"  (str (- (second @chart-dims) (- y 12)) "px")))))
 
 (defn hide-tool-tip
   [element]
