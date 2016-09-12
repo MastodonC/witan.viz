@@ -42,14 +42,16 @@
 
 (defn show-tool-tip
   [element]
-  (let [tt (.querySelector js/document "#lineplot #tooltip")
-        mw (/ (first @chart-dims) 3)
-        x (.-value (.-baseVal (aget (.-target element) "cx")))
-        y (.-value (.-baseVal (aget (.-target element) "cy")))
-        data (.-value (aget (.-attributes (.-target element)) "data-viz"))]
+  (let [tt     (.querySelector js/document "#lineplot #tooltip")
+        mw     (/ (first @chart-dims) 3)
+        x      (.-value (.-baseVal (aget (.-target element) "cx")))
+        y      (.-value (.-baseVal (aget (.-target element) "cy")))
+        data   (.-value (aget (.-attributes (.-target element)) "data-viz-txt"))
+        col    (.-value (aget (.-attributes (.-target element)) "data-viz-color"))]
     (when tt
       (aset tt "innerText" data)
       (aset (.-style tt) "display" "inherit")
+      (aset (.-style tt) "border-color" col)
       (aset (.-style tt)
             (if (<= x mw) "left" "right")
             (str (if (<= x mw) x (- (first @chart-dims) x)) "px"))
@@ -66,10 +68,12 @@
 (defn svg-scatter-plot-with-hover
   [v-spec {:keys [attribs shape values] :as d-spec}]
   (let [[header attr & circles] (viz/svg-scatter-plot v-spec d-spec)
+        {:keys [fill]} attribs
         circles' (map-indexed
                   (fn [i c] (let [[x y] (nth values i)]
                               (update c 1 assoc
-                                      :data-viz (str "x: " x "\ny: " y)
+                                      :data-viz-txt (str "x: " x "\ny: " y)
+                                      :data-viz-color @fill
                                       :class "lineplot-point"
                                       :on-mouse-over show-tool-tip
                                       :on-mouse-leave hide-tool-tip))) circles)]
@@ -82,31 +86,32 @@
 
 (defn viz-spec
   [x y w h data]
-  (let [mmfn (juxt (partial apply min) (partial apply max))
+  (let [mmfn          (juxt (partial apply min) (partial apply max))
         x-minmax-data (map #(mmfn (map first %)) data)
         y-minmax-data (map #(mmfn (map last  %)) data)
         [x-min x-max] [(apply min (map first x-minmax-data))
-                       (apply max (map last x-minmax-data))]
+                       (apply max (map last  x-minmax-data))]
         [y-min y-max] [(apply min (map first y-minmax-data))
-                       (apply max (map last y-minmax-data))]
+                       (apply max (map last  y-minmax-data))]
         [y-min y-max] [(* y-min 0.9) (* y-max 1.1)]
-        x-delta (- x-max x-min)
-        y-delta (- y-max y-min)
-        x-major (int (/ x-delta 6))
-        x-minor (int (/ x-delta 12))
-        y-major (int (round-up-to-mod 5 (/ y-delta 6)))
-        datav   (reduce
-                 (fn [a [i d]]
-                   (concat a [{:values d
-                               :attribs {:fill "none"
-                                         :stroke (color-preset i)
-                                         :stroke-width "3"}
-                               :layout  viz/svg-line-plot}
-                              {:values  d
-                               :attribs {:fill (color-preset i)
-                                         :stroke "none"}
-                               :layout  svg-scatter-plot-with-hover}])) []
-                 (map-indexed vector data))]
+        x-delta       (- x-max x-min)
+        y-delta       (- y-max y-min)
+        x-major       (int (/ x-delta 6))
+        x-minor       (int (/ x-delta 12))
+        y-major       (int (round-up-to-mod 5 (/ y-delta 6)))
+        datav         (reduce
+                       (fn [a [i d]]
+                         (concat a [{:values d
+                                     :attribs {:fill "none"
+                                               :stroke (color-preset i)
+                                               :stroke-width "3"}
+                                     :layout  viz/svg-line-plot}
+                                    {:values  d
+                                     :attribs {:fill (color-preset i)
+                                               :stroke "none"}
+                                     :layout  svg-scatter-plot-with-hover}]))
+                       []
+                       (map-indexed vector data))]
     {:x-axis (viz/linear-axis
               {:domain [x-min x-max]
                :range  [50 (- w 10)]

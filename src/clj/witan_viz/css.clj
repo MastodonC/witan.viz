@@ -25,6 +25,7 @@
      :display :none
      :color "#fff"
      :background-color "#000"
+     :border [[(px 2) :transparent 'solid]]
      :padding (px 3)
      :white-space 'nowrap
      :border-radius (px 4)}]])
