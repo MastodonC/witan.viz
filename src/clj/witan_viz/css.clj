@@ -1,6 +1,6 @@
 (ns witan-viz.css
   (:require [garden.def :refer [defstyles]]
-            [garden.units :refer :all]
+            [garden.units :refer [px]]
             [garden.selectors :as s]))
 
 (defstyles screen

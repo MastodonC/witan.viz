@@ -75,8 +75,8 @@
         #_(.addEventListener js/window "error"  send-error))
       :reagent-render
       (fn []
-        (let [d @display]
-          (if (:ready? d)
+        (let [{:keys [error] :as d} @display]
+          (if (or error (:ready? d))
             (visualisation d)
             (if (:spinner d)
               [re-com/box

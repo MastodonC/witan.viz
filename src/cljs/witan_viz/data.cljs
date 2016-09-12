@@ -112,7 +112,7 @@
     (let [_ (when-not @ws-conn (connect!))
           payloads (map-indexed (fn [i ds]
                                   (let [grps (re-find #"^(.*)::(.+)$" ds)
-                                        id (or (nth grps 1) i)
+                                        id (str (or (nth grps 1) i))
                                         ds (or (nth grps 2) ds)]
                                     (hash-map :id (if (clojure.string/blank? id) i id)
                                               :location ds
@@ -124,11 +124,13 @@
               id (some #(when (= location (:location %)) (:id %)) payloads)
               agg' (merge agg {id result})]
           (log/debug "Got result from" id location)
-          (if (= (count agg') (count datasets))
-            (let [result (into {} (map (fn [[k v]]
-                                         {k (f/apply-filters filters k v)}) agg'))]
-              (re-frame/dispatch [:got-data result]))
-            (recur agg')))))))
+          (if error
+            (re-frame/dispatch [:raise-error (str error)])
+            (if (= (count agg') (count datasets))
+              (let [result (into {} (map (fn [[k v]]
+                                           {k (f/apply-filters filters k v)}) agg'))]
+                (re-frame/dispatch [:got-data result]))
+              (recur agg'))))))))
 
 (defn send-ready-message!
   [pym h]
