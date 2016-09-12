@@ -82,10 +82,13 @@
 
 (defn viz-spec
   [x y w h data]
-  (log/debug cc/cat10)
   (let [mmfn (juxt (partial apply min) (partial apply max))
-        [x-min x-max] (mmfn (map first (first data))) ;; TODO don't use first data for minmax
-        [y-min y-max] (mmfn (map last  (first data))) ;; TODO don't use first data for minmax
+        x-minmax-data (map #(mmfn (map first %)) data)
+        y-minmax-data (map #(mmfn (map last  %)) data)
+        [x-min x-max] [(apply min (map first x-minmax-data))
+                       (apply max (map last x-minmax-data))]
+        [y-min y-max] [(apply min (map first y-minmax-data))
+                       (apply max (map last y-minmax-data))]
         [y-min y-max] [(* y-min 0.9) (* y-max 1.1)]
         x-delta (- x-max x-min)
         y-delta (- y-max y-min)
