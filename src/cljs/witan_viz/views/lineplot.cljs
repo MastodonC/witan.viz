@@ -10,10 +10,15 @@
             [thi.ng.geom.svg.adapter :as svgadapter]
             [thi.ng.geom.core.vector :as v]
             [thi.ng.color.core :as col]
+            [thi.ng.color.presets.categories :as cc]
             [thi.ng.math.core :as m :refer [PI TWO_PI]]))
 
 (def default-dims [800 400])
 (defonce chart-dims (atom nil))
+
+(defn color-preset
+  [i]
+  (-> (nth cc/cat10 i) col/int24 col/as-css))
 
 (defn test-equation
   [t] (let [x (m/mix (- PI) PI t)] [x (* (Math/cos (* 0.5 x)) (Math/sin (* x x x)))]))
@@ -37,18 +42,20 @@
 
 (defn show-tool-tip
   [element]
-  (let [tt (.querySelector js/document "#lineplot #tooltip")
-        mw (/ (first @chart-dims) 3)
-        x (.-value (.-baseVal (aget (.-target element) "cx")))
-        y (.-value (.-baseVal (aget (.-target element) "cy")))
-        data (.-value (aget (.-attributes (.-target element)) "data-viz"))]
+  (let [tt     (.querySelector js/document "#lineplot #tooltip")
+        mw     (/ (first @chart-dims) 2)
+        x      (.-value (.-baseVal (aget (.-target element) "cx")))
+        y      (.-value (.-baseVal (aget (.-target element) "cy")))
+        data   (.-value (aget (.-attributes (.-target element)) "data-viz-txt"))
+        col    (.-value (aget (.-attributes (.-target element)) "data-viz-color"))]
     (when tt
       (aset tt "innerText" data)
       (aset (.-style tt) "display" "inherit")
+      (aset (.-style tt) "border-color" col)
       (aset (.-style tt)
             (if (<= x mw) "left" "right")
             (str (if (<= x mw) x (- (first @chart-dims) x)) "px"))
-      (aset (.-style tt) "top"  (str (- y 32) "px")))))
+      (aset (.-style tt) "bottom"  (str (- (second @chart-dims) (- y 12)) "px")))))
 
 (defn hide-tool-tip
   [element]
@@ -61,10 +68,12 @@
 (defn svg-scatter-plot-with-hover
   [v-spec {:keys [attribs shape values] :as d-spec}]
   (let [[header attr & circles] (viz/svg-scatter-plot v-spec d-spec)
+        {:keys [fill]} attribs
         circles' (map-indexed
                   (fn [i c] (let [[x y] (nth values i)]
                               (update c 1 assoc
-                                      :data-viz (str "x: " x " y: " y)
+                                      :data-viz-txt (str "x: " x "\ny: " y)
+                                      :data-viz-color @fill
                                       :class "lineplot-point"
                                       :on-mouse-over show-tool-tip
                                       :on-mouse-leave hide-tool-tip))) circles)]
@@ -77,15 +86,32 @@
 
 (defn viz-spec
   [x y w h data]
-  (let [mmfn (juxt (partial apply min) (partial apply max))
-        [x-min x-max] (mmfn (map first data))
-        [y-min y-max] (mmfn (map last  data))
+  (let [mmfn          (juxt (partial apply min) (partial apply max))
+        x-minmax-data (map #(mmfn (map first %)) data)
+        y-minmax-data (map #(mmfn (map last  %)) data)
+        [x-min x-max] [(apply min (map first x-minmax-data))
+                       (apply max (map last  x-minmax-data))]
+        [y-min y-max] [(apply min (map first y-minmax-data))
+                       (apply max (map last  y-minmax-data))]
         [y-min y-max] [(* y-min 0.9) (* y-max 1.1)]
-        x-delta (- x-max x-min)
-        y-delta (- y-max y-min)
-        x-major (int (/ x-delta 6))
-        x-minor (int (/ x-delta 12))
-        y-major (int (round-up-to-mod 5 (/ y-delta 6)))]
+        x-delta       (- x-max x-min)
+        y-delta       (- y-max y-min)
+        x-major       (int (/ x-delta 6))
+        x-minor       (int (/ x-delta 12))
+        y-major       (int (round-up-to-mod 5 (/ y-delta 6)))
+        datav         (reduce
+                       (fn [a [i d]]
+                         (concat a [{:values d
+                                     :attribs {:fill "none"
+                                               :stroke (color-preset i)
+                                               :stroke-width "3"}
+                                     :layout  viz/svg-line-plot}
+                                    {:values  d
+                                     :attribs {:fill (color-preset i)
+                                               :stroke "none"}
+                                     :layout  svg-scatter-plot-with-hover}]))
+                       []
+                       (map-indexed vector data))]
     {:x-axis (viz/linear-axis
               {:domain [x-min x-max]
                :range  [50 (- w 10)]
@@ -103,14 +129,7 @@
                :label-style {:text-anchor "end"}})
      :grid   {:attribs {:stroke "#caa"}
               :minor-y true}
-     :data   [{:values  data
-               :attribs {:fill "none"
-                         :stroke "#0af"
-                         :stroke-width "3"}
-               :layout  viz/svg-line-plot}
-              {:values  data
-               :attribs {:fill "#0af" :stroke "none"}
-               :layout  svg-scatter-plot-with-hover}]}))
+     :data   datav}))
 
 (defn prepare-data
   [[headers & rows] x y]
@@ -142,14 +161,14 @@
         (send-ready-message! pym (+ (second @chart-dims) 0)))
       :reagent-render
       (fn [{:keys [data args] :as params}]
-        (let [{:keys [location data]} (-> data first second)
-              {:keys [width height]
+        (let [{:keys [width height]
                :or {width (first @chart-dims)
                     height (second @chart-dims)}} (:dimensions params)
               {:keys [x y]} args
-              prepped-data (prepare-data data x y)]
+              datav (mapv (fn [[k v]] (vec (:data v))) data)
+              prepped-data (mapv #(prepare-data % x y) datav)]
           (reset! chart-dims [width height])
-          (when prepped-data
+          (when-not (empty? prepped-data)
             [:div
              {:id "lineplot"}
              (-> (viz-spec x y width (- height 10) prepped-data)

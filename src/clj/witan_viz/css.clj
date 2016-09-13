@@ -1,6 +1,6 @@
 (ns witan-viz.css
   (:require [garden.def :refer [defstyles]]
-            [garden.units :refer :all]
+            [garden.units :refer [px]]
             [garden.selectors :as s]))
 
 (defstyles screen
@@ -25,6 +25,7 @@
      :display :none
      :color "#fff"
      :background-color "#000"
+     :border [[(px 2) :transparent 'solid]]
      :padding (px 3)
      :white-space 'nowrap
      :border-radius (px 4)}]])
