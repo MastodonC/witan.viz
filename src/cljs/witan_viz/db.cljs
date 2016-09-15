@@ -16,22 +16,23 @@
                (map clojure.string/trim)
                (set))]
     (when (not-empty a)
-      (log/info "Data:" a)
       (data/fetch-datasets a ops))))
 
 (defn get-style
   [qd]
-  (let [a (-> qd (.get "style") (keyword))]
-    (log/info "Style:" a)
-    a))
+  (-> qd (.get "style") (keyword)))
 
 (defn get-spinner
   [qd]
-  (let [a (-> qd
-              (.get "spinner" "true")
-              (= "true"))]
-    (log/info "Spinner:" a)
-    a))
+  (-> qd
+      (.get "spinner" "true")
+      (= "true")))
+
+(defn get-settings-button
+  [qd]
+  (-> qd
+      (.get "settings" "true")
+      (= "true")))
 
 (defn get-filters
   [qd]
@@ -43,34 +44,31 @@
                (filter #(= 4 (count %)))
                (map #(update (vec %) 0 (fn [x] (when x (subs x 0 (- (count x) 2) )))))
                (map #(apply f/->Filter. %)))]
-    (when a
-      (log/info "Filters:" a))
     a))
 
 (defn get-args
   [qd]
-  (let [arg-map
-        (->> qd
-             (.getKeys)
-             (js->clj)
-             (filter #(gstr/caseInsensitiveStartsWith % "args"))
-             (map #(hash-map (->> %
-                                  (re-find #"\[(.+)\]")
-                                  (last)
-                                  (keyword)) (.get qd %)))
-             (into {}))]
-    (log/info "Arguments:" arg-map)
-    arg-map))
+  (->> qd
+       (.getKeys)
+       (js->clj)
+       (filter #(gstr/caseInsensitiveStartsWith % "args"))
+       (map #(hash-map (->> %
+                            (re-find #"\[(.+)\]")
+                            (last)
+                            (keyword)) (.get qd %)))
+       (into {})))
 
 (defn make-db
   ([url]
    (let [qd (get-query-data url)
          filters (get-filters qd)]
      (get-data (.get qd "data") {:filters filters})
-     {:data nil
-      :spinner (get-spinner qd)
-      :style (get-style qd)
-      :filters filters
-      :args  (get-args qd)}))
+     {:data      nil
+      :spinner?  (get-spinner qd)
+      :settings? (get-settings-button qd)
+      :settings-open? false
+      :style     (get-style qd)
+      :filters   filters
+      :args      (get-args qd)}))
   ([]
    (make-db (.-location js/window))))

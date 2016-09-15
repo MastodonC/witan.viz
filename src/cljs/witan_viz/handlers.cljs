@@ -30,3 +30,15 @@
  (fn  [db [_ msg]]
    (log/error "An error was raised:" msg)
    (assoc db :error msg)))
+
+(re-frame/reg-event-db
+ :open-settings
+ (fn  [db [_ msg]]
+   (log/info "Opening settings window...")
+   (assoc db :settings-open? true)))
+
+(re-frame/reg-event-db
+ :close-settings
+ (fn  [db [_ msg]]
+   (log/info "Closing settings window...")
+   (assoc db :settings-open? false)))

@@ -57,6 +57,55 @@
    [:h1 "ERROR"]
    [:h2 (:error m)]])
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn filter-dialog
+  []
+  (fn []
+    [:div
+     [:p "FILTERS LOLOLOL"]
+     [:p "FILTERS LOLOLOL"]]))
+
+(defn settings-dialog
+  []
+  (let [settings (re-frame/subscribe [:settings])]
+    (fn []
+      (let [{:keys [settings-open? settings?]} @settings
+            setting-widget (fn [label control]
+                             [re-com/h-box
+                              :children [[re-com/label
+                                          :label label
+                                          :width "100px"]
+                                         [control]]])
+            settings-children [(setting-widget "Filters" filter-dialog)
+                               (setting-widget "Filters2" filter-dialog)]]
+        [re-com/v-box
+         :class "settings"
+         :justify :end
+         :align :end
+         :children [(when (or settings? settings-open?)
+                      [re-com/md-icon-button
+                       :md-icon-name (if settings-open? "zmdi-close" "zmdi-settings")
+                       :style (if settings-open? {} {:border-radius "3px"})
+                       :class "settings-button"
+                       :on-click #(if settings-open?
+                                    (re-frame/dispatch [:close-settings])
+                                    (re-frame/dispatch [:open-settings]))])
+                    (when settings-open?
+                      [re-com/v-box
+                       :class "settings-box"
+                       :width "100%"
+                       :children [[re-com/title
+                                   :label "Settings"
+                                   :level :level1]
+                                  [re-com/line]
+                                  [re-com/gap :size "5px"]
+                                  [re-com/title
+                                   :label "Data Settings"
+                                   :level :level2]
+                                  [re-com/v-box
+                                   :children settings-children]]])]]))))
+
 (defn main-panel []
   (let [display    (re-frame/subscribe [:display])]
     (r/create-class
@@ -75,14 +124,21 @@
         #_(.addEventListener js/window "error"  send-error))
       :reagent-render
       (fn []
-        (let [{:keys [error] :as d} @display]
-          (if (or error (:ready? d))
-            (visualisation d)
-            (if (:spinner d)
-              [re-com/box
-               :width "100%"
-               :height "100%"
-               :align :center
-               :justify :center
-               :child [re-com/throbber :size :large]]
-              [:div]))))})))
+        (let [{:keys [error
+                      spinner?
+                      ready?] :as d} @display]
+          [:div
+           {:style {:width "100%"
+                    :height "100%"}}
+           (if (or error ready?)
+             (visualisation d)
+             (if spinner?
+               [re-com/box
+                :width "100%"
+                :height "100%"
+                :align :center
+                :justify :center
+                :child [re-com/throbber :size :large]]
+               [:div]))
+           (when ready?
+             [settings-dialog])]))})))
