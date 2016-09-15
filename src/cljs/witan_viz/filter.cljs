@@ -1,19 +1,23 @@
 (ns witan-viz.filter
-  (:require [taoensso.timbre :as log]))
+  (:require [taoensso.timbre :as log]
+            [reagent.core :as r]
+            [re-frame.core :as re-frame]
+            [re-com.core :as re-com]))
 
 (defrecord Filter
     [label column operation variable])
 
+(def operations
+  [{:id 1 :symbol "="  :label "Equal To"                 :function =}
+   {:id 2 :symbol "!=" :label "Not Equal To"             :function (comp not =)}
+   {:id 3 :symbol ">"  :label "Greater Than"             :function >}
+   {:id 4 :symbol "<"  :label "Less Than"                :function <}
+   {:id 5 :symbol ">=" :label "Greater Than or Equal To" :function >=}
+   {:id 6 :symbol "<=" :label "Less Than or Equal To"    :function <=}])
+
 (defn str->operation
   [op]
-  (condp = op
-    "="  =
-    "!=" (comp not =)
-    ">"  >
-    "<"  <
-    ">=" >=
-    "<=" <=
-    nil))
+  (some #(when (= op (:symbol %)) (:function %)) operations))
 
 (defn apply-filters
   [filters id {:keys [location data] :as dataset}]
@@ -32,3 +36,120 @@
                                      a))
                                  rows filters)) data)]
     (assoc dataset :data result)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn adjust-filter
+  [old key value]
+  (re-frame/dispatch [:update-filter old key value]))
+
+(defn id->label
+  [coll val]
+  (some (fn [c] (when (= val (:id c)) (:label c))) coll))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmulti variable-control
+  (fn [schema filter] (:type schema)))
+
+(defmethod variable-control
+  :string
+  [{:keys [range]}
+   {:keys [variable] :as filter}]
+  (let [choices (map-indexed #(hash-map :id %1 :label %2) range)
+        idx (some (fn [c] (when (= variable (:label c)) (:id c))) choices)]
+    [re-com/single-dropdown
+     :choices choices
+     :placeholder "S Select value..."
+     :on-change #(adjust-filter filter :variable (id->label choices %))
+     :model idx]))
+
+(defmethod variable-control
+  :number
+  [schema filter]
+  (let [v (r/atom nil)
+        t (atom nil)]
+    (fn [{:keys [range]}
+         {:keys [variable] :as filter}]
+      (let [v2 (js/parseFloat variable)]
+        [re-com/h-box
+         :class "filter-widget-slider-container"
+         :width "100%"
+         :children[[re-com/slider
+                    :width "100%"
+                    :min (first range)
+                    :max (last range)
+                    :on-change #(do
+                                  (reset! v %)
+                                  (when @t
+                                    (js/clearTimeout @t))
+                                  (reset! t (js/setTimeout
+                                             (fn []
+                                               (adjust-filter filter :variable @v)) 300)))
+                    :model (or @v v2)]
+                   [re-com/box
+                    :align :center
+                    :width "100px"
+                    :child [re-com/label
+                            :class "filter-widget-slider-label"
+                            :label (or @v v2)]]]]))))
+
+(defn filter-dialog
+  []
+  (let [filters     (re-frame/subscribe [:filters])
+        data-schema (re-frame/subscribe [:data-schema])]
+    (fn []
+      (let [{:keys [filters]} @filters
+            {:keys [data-schema]} @data-schema
+            col-choices (vec (map-indexed
+                              (fn [i a]
+                                {:id i :label a})
+                              (reduce concat []
+                                      (map (fn [[label {:keys [columns]}]]
+                                             (map :name columns)) data-schema))))
+            schema  (reduce (fn [a c]
+                              (reduce #(assoc %1 (:name %2) %2) a c))
+                            {}
+                            (map (comp :columns second) data-schema))]
+        [re-com/box
+         :size "auto"
+         :child [re-com/v-box
+                 :gap "8px"
+                 :align :stretch
+                 :children [[re-com/md-circle-icon-button
+                             :md-icon-name "zmdi-plus"
+                             :size :smaller]
+                            (doall
+                             (for [{:keys [column operation variable] :as f} filters]
+                               (let [col-idx (some #(when (= column (:label %)) (:id %)) col-choices)
+                                     op-idx  (some #(when (= operation (:symbol %)) (:id %)) operations)]
+                                 ^{:key column}
+                                 [re-com/h-box
+                                  :class "filter-row"
+                                  :gap "5px"
+                                  :width "100%"
+                                  :children [[re-com/box
+                                              :child [re-com/md-circle-icon-button
+                                                      :md-icon-name "zmdi-delete"
+                                                      :size :smaller]]
+                                             [re-com/box
+                                              :class "filter-control-column"
+                                              :width "30%"
+                                              :child [re-com/single-dropdown
+                                                      :choices col-choices
+                                                      :placeholder "Select column..."
+                                                      :on-change #(adjust-filter f :column (id->label col-choices %))
+                                                      :model col-idx]]
+                                             [re-com/box
+                                              :class "filter-control-operation"
+                                              :width "30%"
+                                              :child [re-com/single-dropdown
+                                                      :choices operations
+                                                      :placeholder "Select operation..."
+                                                      :on-change #()
+                                                      :label-fn #(str (:label %) " (" (:symbol %) ")")
+                                                      :model op-idx]]
+                                             [re-com/box
+                                              :class "filter-control-variable"
+                                              :width "30%"
+                                              :child [variable-control (get schema column) f]]]])))]]]))))

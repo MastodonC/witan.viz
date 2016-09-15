@@ -5,6 +5,8 @@
             [re-com.core :as re-com]
             [taoensso.timbre :as log]
             ;;
+            [witan-viz.filter :as f]
+            ;;
             [witan-viz.views.table :as table]
             [witan-viz.views.lineplot :as lineplot]))
 
@@ -59,12 +61,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn filter-dialog
-  []
-  (fn []
-    [:div
-     [:p "FILTERS LOLOLOL"]
-     [:p "FILTERS LOLOLOL"]]))
 
 (defn settings-dialog
   []
@@ -75,10 +71,9 @@
                              [re-com/h-box
                               :children [[re-com/label
                                           :label label
-                                          :width "100px"]
+                                          :width "50px"]
                                          [control]]])
-            settings-children [(setting-widget "Filters" filter-dialog)
-                               (setting-widget "Filters2" filter-dialog)]]
+            settings-children [(setting-widget "Filters" f/filter-dialog)]]
         [re-com/v-box
          :class "settings"
          :justify :end
@@ -103,6 +98,7 @@
                                   [re-com/title
                                    :label "Data Settings"
                                    :level :level2]
+                                  [re-com/gap :size "5px"]
                                   [re-com/v-box
                                    :children settings-children]]])]]))))
 

@@ -43,7 +43,7 @@
                (map #(rest (re-find #"^(.*::)?([a-zA-Z0-9_-]+)([!=<>]+)([a-zA-Z0-9_-]+)$" %)))
                (filter #(= 4 (count %)))
                (map #(update (vec %) 0 (fn [x] (when x (subs x 0 (- (count x) 2) )))))
-               (map #(apply f/->Filter. %)))]
+               (mapv #(apply f/->Filter. %)))]
     a))
 
 (defn get-args

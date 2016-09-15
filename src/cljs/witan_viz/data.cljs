@@ -105,6 +105,22 @@
     (download-csv location location)
     (command! :workspace/create-result-url "1.0.0" {:workspace/result-location location})))
 
+(defn build-schema
+  [label {:keys [location data] :as dataset}]
+  (let [[headers & rows] data]
+    {:label label
+     :columns (mapv #(let [idx (.indexOf headers %)
+                           vals (map (fn [r] (nth r idx)) rows)
+                           number? (not (js/isNaN (js/parseFloat (first vals))))
+                           vals' (if number? (map js/parseFloat vals) vals)]
+                       (hash-map
+                        :name %
+                        :idx idx
+                        :type (if number? :number :string)
+                        :range (if number? [(apply min vals')
+                                            (apply max vals')]
+                                   (set vals')))) headers)}))
+
 (defn fetch-datasets
   [datasets {:keys [filters]}]
   (if-not (coll? datasets)
@@ -128,8 +144,11 @@
             (re-frame/dispatch [:raise-error (str error)])
             (if (= (count agg') (count datasets))
               (let [result (into {} (map (fn [[k v]]
-                                           {k (f/apply-filters filters k v)}) agg'))]
-                (re-frame/dispatch [:got-data result]))
+                                           {k (f/apply-filters filters k v)}) agg'))
+                    schema (into {} (map (fn [[k v]]
+                                           {k (build-schema k v)}) agg'))]
+                (re-frame/dispatch [:got-data {:data result
+                                               :data-schema schema}]))
               (recur agg'))))))))
 
 (defn send-ready-message!

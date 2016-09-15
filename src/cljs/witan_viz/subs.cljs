@@ -10,9 +10,20 @@
     {:ready? (-> (:data db) nil? not)}
     (-> db
         (dissoc :settings-open?)
-        (dissoc :settings?)))))
+        (dissoc :settings?)
+        (dissoc :filters)))))
 
 (re-frame/reg-sub
  :settings
  (fn [db]
    (select-keys db [:settings-open? :settings?])))
+
+(re-frame/reg-sub
+ :filters
+ (fn [db]
+   (select-keys db [:filters])))
+
+(re-frame/reg-sub
+ :data-schema
+ (fn [db]
+   (select-keys db [:data-schema])))

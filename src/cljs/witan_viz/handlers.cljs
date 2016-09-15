@@ -15,8 +15,10 @@
 
 (re-frame/reg-event-db
  :got-data
- (fn  [db [_ data]]
-   (assoc db :data data)))
+ (fn  [db [_ {:keys [data data-schema]}]]
+   (assoc db
+          :data data
+          :data-schema data-schema)))
 
 (re-frame/reg-event-db
  :force-re-draw
@@ -42,3 +44,14 @@
  (fn  [db [_ msg]]
    (log/info "Closing settings window...")
    (assoc db :settings-open? false)))
+
+(re-frame/reg-event-db
+ :update-filter
+ (fn  [{:keys [filters] :as db} [_ old key value]]
+   (log/info "Update filter" old "key" key "value" value)
+   (let [filter-idx  (.indexOf filters old)
+         new-filter (assoc old key value)
+         new-filter (if (= :column key) (dissoc new-filter :variable) new-filter)]
+     (when (not= -1 filter-idx)
+       TODO DISPATCH
+       (assoc-in db [:filters filter-idx] new-filter)))))
