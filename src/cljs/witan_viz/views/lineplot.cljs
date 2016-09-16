@@ -101,6 +101,7 @@
         x-minor       (int (/ x-delta 12))
         x-minor       (if (zero? x-minor) nil x-minor)
         y-major       (int (round-up-to-mod 5 (/ y-delta 6)))
+        y-major       (if (zero? y-major) 1 y-major)
         datav         (reduce
                        (fn [a [i d]]
                          (concat a [{:values d
