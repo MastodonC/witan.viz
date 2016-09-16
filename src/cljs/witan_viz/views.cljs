@@ -14,7 +14,7 @@
 
 (.onMessage pym "arguments" (fn [args]
                               (log/debug "Got request to reload" args)
-                              (re-frame/dispatch [:re-load (str (.. js/window -location -origin) "?" args)])))
+                              (re-frame/dispatch [:reload-db (str (.. js/window -location -origin) "?" args)])))
 
 (defn re-draw
   [_]

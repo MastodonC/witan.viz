@@ -97,7 +97,9 @@
         x-delta       (- x-max x-min)
         y-delta       (- y-max y-min)
         x-major       (int (/ x-delta 6))
+        x-major       (if (zero? x-major) 1 x-major)
         x-minor       (int (/ x-delta 12))
+        x-minor       (if (zero? x-minor) nil x-minor)
         y-major       (int (round-up-to-mod 5 (/ y-delta 6)))
         datav         (reduce
                        (fn [a [i d]]
@@ -111,25 +113,28 @@
                                                :stroke "none"}
                                      :layout  svg-scatter-plot-with-hover}]))
                        []
-                       (map-indexed vector data))]
-    {:x-axis (viz/linear-axis
-              {:domain [x-min x-max]
-               :range  [50 (- w 10)]
-               :major  x-major
-               :minor  x-minor
-               :label  (viz/default-svg-label str)
-               :pos    (- h 20)})
-     :y-axis (viz/linear-axis
-              {:domain      [y-min y-max]
-               :range       [(- h 20) 20]
-               :major       y-major
-               :label       (viz/default-svg-label str)
-               :pos         50
-               :label-dist  12
-               :label-style {:text-anchor "end"}})
-     :grid   {:attribs {:stroke "#caa"}
-              :minor-y true}
-     :data   datav}))
+                       (map-indexed vector data))
+        x-axis (viz/linear-axis
+                {:domain [x-min x-max]
+                 :range  [50 (- w 10)]
+                 :major  x-major
+                 :minor  x-minor
+                 :label  (viz/default-svg-label str)
+                 :pos    (- h 20)})
+        y-axis (viz/linear-axis
+                {:domain      [y-min y-max]
+                 :range       [(- h 20) 20]
+                 :major       y-major
+                 :label       (viz/default-svg-label str)
+                 :pos         50
+                 :label-dist  12
+                 :label-style {:text-anchor "end"}})
+        r {:x-axis x-axis
+           :y-axis y-axis
+           :grid   {:attribs {:stroke "#caa"}
+                    :minor-y true}
+           :data   datav}]
+    r))
 
 (defn prepare-data
   [[headers & rows] x y]
@@ -169,10 +174,10 @@
               prepped-data (mapv #(prepare-data % x y) datav)]
           (reset! chart-dims [width height])
           (when-not (empty? prepped-data)
-            [:div
-             {:id "lineplot"}
-             (-> (viz-spec x y width (- height 10) prepped-data)
-                 (viz/svg-plot2d-cartesian)
-                 (svgadapter/inject-element-attribs)
-                 (bake-viz width height))
-             [:div#tooltip "hello, world"]])))})))
+            (let [a (viz-spec x y width (- height 10) prepped-data)
+                  b (viz/svg-plot2d-cartesian a)
+                  c (svgadapter/inject-element-attribs b)]
+              [:div
+               {:id "lineplot"}
+               (bake-viz c width height)
+               [:div#tooltip "hello, world"]]))))})))

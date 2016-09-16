@@ -40,7 +40,7 @@
               (.get "filter")
               (clojure.string/split ","))
         a (->> a
-               (map #(rest (re-find #"^(.*::)?([a-zA-Z0-9_-]+)([!=<>]+)([a-zA-Z0-9_-]+)$" %)))
+               (map #(rest (re-find #"^(.*::)?([a-zA-Z0-9_-]+)([!=<>]+)([a-zA-Z0-9_-]*)$" %)))
                (filter #(= 4 (count %)))
                (map #(update (vec %) 0 (fn [x] (when x (subs x 0 (- (count x) 2) )))))
                (mapv #(apply f/->Filter. %)))]
@@ -59,6 +59,7 @@
        (into {})))
 
 (defn make-db
+  "Make the database, as if from scratch"
   ([url]
    (let [qd (get-query-data url)
          filters (get-filters qd)]
@@ -72,3 +73,23 @@
       :args      (get-args qd)}))
   ([]
    (make-db (.-location js/window))))
+
+(defn refresh-db
+  "Assume volatile features are changed."
+  [db url]
+  (let [qd          (get-query-data url)
+        new-filters (get-filters qd)
+        style       (get-style qd)
+        args        (get-args qd)]
+    (if (not= style (:style db))
+      ;; all bets are off
+      (do
+        (log/warn "Hard DB reset.")
+        (make-db))
+      ;; attempt a smooth refresh
+      (do
+        (log/info "Attempting to smooth-reset data...")
+        (get-data (.get qd "data") {:filters new-filters})
+        (assoc db
+               :filters new-filters
+               :args    args)))))

@@ -2,10 +2,15 @@
   (:require [taoensso.timbre :as log]
             [reagent.core :as r]
             [re-frame.core :as re-frame]
+            [goog.string :as gstr]
+            [clojure.string :as str]
             [re-com.core :as re-com]))
 
 (defrecord Filter
-    [label column operation variable])
+    [label column operation variable]
+  Object
+  (toString [_]
+    (str column (gstr/urlEncode operation) variable)))
 
 (def operations
   [{:id 1 :symbol "="  :label "Equal To"                 :function =}
@@ -24,8 +29,9 @@
   (let [[headers & rows] data
         result (if rows
                  (concat [headers]
-                         (reduce (fn [a {:keys [column label variable operation]}]
-                                   (if (or (not label) (= label id))
+                         (reduce (fn [a {:keys [column label variable operation] :as f}]
+                                   (if (and (not (str/blank? variable))
+                                            (or (not label) (= label id)))
                                      (let [col-idx (.indexOf headers column)
                                            op (str->operation operation)]
                                        (if (= -1 col-idx)
@@ -53,6 +59,11 @@
   (fn [schema filter] (:type schema)))
 
 (defmethod variable-control
+  :default
+  [_ _]
+  [:div])
+
+(defmethod variable-control
   :string
   [{:keys [range]}
    {:keys [variable] :as filter}]
@@ -60,7 +71,7 @@
         idx (some (fn [c] (when (= variable (:label c)) (:id c))) choices)]
     [re-com/single-dropdown
      :choices choices
-     :placeholder "S Select value..."
+     :placeholder "Select value..."
      :on-change #(adjust-filter filter :variable (id->label choices %))
      :model idx]))
 
@@ -71,7 +82,9 @@
         t (atom nil)]
     (fn [{:keys [range]}
          {:keys [variable] :as filter}]
-      (let [v2 (js/parseFloat variable)]
+      (let [v2 (js/parseFloat variable)
+            value? (not (js/isNaN v2))
+            v2 (if value? v2 (first range))]
         [re-com/h-box
          :class "filter-widget-slider-container"
          :width "100%"
@@ -92,7 +105,7 @@
                     :width "100px"
                     :child [re-com/label
                             :class "filter-widget-slider-label"
-                            :label (or @v v2)]]]]))))
+                            :label (if value? (or @v v2) "???")]]]]))))
 
 (defn filter-dialog
   []
@@ -118,12 +131,18 @@
                  :align :stretch
                  :children [[re-com/md-circle-icon-button
                              :md-icon-name "zmdi-plus"
-                             :size :smaller]
+                             :size :smaller
+                             :on-click #(re-frame/dispatch [:add-filter])]
                             (doall
                              (for [{:keys [column operation variable] :as f} filters]
                                (let [col-idx (some #(when (= column (:label %)) (:id %)) col-choices)
-                                     op-idx  (some #(when (= operation (:symbol %)) (:id %)) operations)]
-                                 ^{:key column}
+                                     op-idx  (some #(when (= operation (:symbol %)) (:id %)) operations)
+                                     other-columns (->> filters
+                                                        (remove #{f})
+                                                        (map :column)
+                                                        (set))
+                                     box-width "130px"]
+                                 ^{:key (or column "new")}
                                  [re-com/h-box
                                   :class "filter-row"
                                   :gap "5px"
@@ -131,18 +150,19 @@
                                   :children [[re-com/box
                                               :child [re-com/md-circle-icon-button
                                                       :md-icon-name "zmdi-delete"
-                                                      :size :smaller]]
+                                                      :size :smaller
+                                                      :on-click #(re-frame/dispatch [:delete-filter f])]]
                                              [re-com/box
                                               :class "filter-control-column"
-                                              :width "30%"
+                                              :width box-width
                                               :child [re-com/single-dropdown
-                                                      :choices col-choices
+                                                      :choices (remove #(contains? other-columns (:label %)) col-choices)
                                                       :placeholder "Select column..."
                                                       :on-change #(adjust-filter f :column (id->label col-choices %))
                                                       :model col-idx]]
                                              [re-com/box
                                               :class "filter-control-operation"
-                                              :width "30%"
+                                              :width box-width
                                               :child [re-com/single-dropdown
                                                       :choices operations
                                                       :placeholder "Select operation..."
@@ -151,5 +171,5 @@
                                                       :model op-idx]]
                                              [re-com/box
                                               :class "filter-control-variable"
-                                              :width "30%"
+                                              :width box-width
                                               :child [variable-control (get schema column) f]]]])))]]]))))
