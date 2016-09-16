@@ -97,10 +97,10 @@
         x-delta       (- x-max x-min)
         y-delta       (- y-max y-min)
         x-major       (int (/ x-delta 6))
-        x-major       (if (zero? x-major) 1 x-major)
         x-minor       (int (/ x-delta 12))
-        x-minor       (if (zero? x-minor) nil x-minor)
         y-major       (int (round-up-to-mod 5 (/ y-delta 6)))
+        x-major       (if (zero? x-major) 1 x-major)
+        x-minor       (if (zero? x-minor) nil x-minor)
         y-major       (if (zero? y-major) 1 y-major)
         datav         (reduce
                        (fn [a [i d]]
