@@ -117,9 +117,10 @@
             col-choices (vec (map-indexed
                               (fn [i a]
                                 {:id i :label a})
-                              (reduce concat []
-                                      (map (fn [[label {:keys [columns]}]]
-                                             (map :name columns)) data-schema))))
+                              (set
+                               (reduce concat []
+                                       (map (fn [[label {:keys [columns]}]]
+                                              (map :name columns)) data-schema)))))
             schema  (reduce (fn [a c]
                               (reduce #(assoc %1 (:name %2) %2) a c))
                             {}

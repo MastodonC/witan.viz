@@ -16,6 +16,9 @@
                               (log/debug "Got request to reload" args)
                               (re-frame/dispatch [:reload-db (str (.. js/window -location -origin) "?" args)])))
 
+(.onMessage pym "get-location" (fn [args]
+                                 (.sendMessage pym "location" (str (.. js/window -location)))))
+
 (defn re-draw
   [_]
   (let [el (.getElementById js/document "vizapp")
@@ -136,5 +139,5 @@
                 :justify :center
                 :child [re-com/throbber :size :large]]
                [:div]))
-           (when ready?
+           (when (and ready? (not error))
              [settings-dialog])]))})))
