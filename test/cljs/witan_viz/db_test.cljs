@@ -40,6 +40,20 @@
     (is (= (db/get-spinner (db/get-query-data (make-url "?spinner=foo")))
            false))))
 
+(deftest settings
+  (testing "true"
+    (is (= (db/get-settings-button (db/get-query-data (make-url "?settings=true")))
+           true)))
+  (testing "false"
+    (is (= (db/get-settings-button (db/get-query-data (make-url "?settings=false")))
+           false)))
+  (testing "default"
+    (is (= (db/get-settings-button (db/get-query-data (make-url "?")))
+           true)))
+  (testing "foo?"
+    (is (= (db/get-settings-button (db/get-query-data (make-url "?settings=foo")))
+           false))))
+
 (deftest args
   (testing "args 1"
     (is (= (db/get-args (db/get-query-data (make-url "?args[foo]=bar&args[baz]=qux")))

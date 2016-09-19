@@ -5,6 +5,8 @@
             [re-com.core :as re-com]
             [taoensso.timbre :as log]
             ;;
+            [witan-viz.filter :as f]
+            ;;
             [witan-viz.views.table :as table]
             [witan-viz.views.lineplot :as lineplot]))
 
@@ -12,7 +14,16 @@
 
 (.onMessage pym "arguments" (fn [args]
                               (log/debug "Got request to reload" args)
-                              (re-frame/dispatch [:re-load (str (.. js/window -location -origin) "?" args)])))
+                              (re-frame/dispatch [:reload-db (str (.. js/window -location -origin) "?" args)])))
+
+(.onMessage pym "get-location" (fn [args]
+                                 (.sendMessage pym "location" (str (.. js/window -location)))))
+
+(.onMessage pym "open-settings" (fn [args]
+                                  (re-frame/dispatch [:open-settings])))
+
+(.onMessage pym "close-settings" (fn [args]
+                                   (re-frame/dispatch [:close-settings])))
 
 (defn re-draw
   [_]
@@ -57,6 +68,49 @@
    [:h1 "ERROR"]
    [:h2 (:error m)]])
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defn settings-dialog
+  []
+  (let [settings (re-frame/subscribe [:settings])]
+    (fn []
+      (let [{:keys [settings-open? settings?]} @settings
+            setting-widget (fn [label control]
+                             [re-com/h-box
+                              :children [[re-com/label
+                                          :label label
+                                          :width "50px"]
+                                         [control]]])
+            settings-children [(setting-widget "Filters" f/filter-dialog)]]
+        [re-com/v-box
+         :class "settings"
+         :justify :end
+         :align :end
+         :children [(when (or settings? settings-open?)
+                      [re-com/md-icon-button
+                       :md-icon-name (if settings-open? "zmdi-close" "zmdi-settings")
+                       :style (if settings-open? {} {:border-radius "3px"})
+                       :class "settings-button"
+                       :on-click #(if settings-open?
+                                    (re-frame/dispatch [:close-settings])
+                                    (re-frame/dispatch [:open-settings]))])
+                    (when settings-open?
+                      [re-com/v-box
+                       :class "settings-box"
+                       :width "100%"
+                       :children [[re-com/title
+                                   :label "Settings"
+                                   :level :level1]
+                                  [re-com/line]
+                                  [re-com/gap :size "5px"]
+                                  [re-com/title
+                                   :label "Data Settings"
+                                   :level :level2]
+                                  [re-com/gap :size "5px"]
+                                  [re-com/v-box
+                                   :children settings-children]]])]]))))
+
 (defn main-panel []
   (let [display    (re-frame/subscribe [:display])]
     (r/create-class
@@ -75,14 +129,21 @@
         #_(.addEventListener js/window "error"  send-error))
       :reagent-render
       (fn []
-        (let [{:keys [error] :as d} @display]
-          (if (or error (:ready? d))
-            (visualisation d)
-            (if (:spinner d)
-              [re-com/box
-               :width "100%"
-               :height "100%"
-               :align :center
-               :justify :center
-               :child [re-com/throbber :size :large]]
-              [:div]))))})))
+        (let [{:keys [error
+                      spinner?
+                      ready?] :as d} @display]
+          [:div
+           {:style {:width "100%"
+                    :height "100%"}}
+           (if (or error ready?)
+             (visualisation d)
+             (if spinner?
+               [re-com/box
+                :width "100%"
+                :height "100%"
+                :align :center
+                :justify :center
+                :child [re-com/throbber :size :large]]
+               [:div]))
+           (when (and ready? (not error))
+             [settings-dialog])]))})))
