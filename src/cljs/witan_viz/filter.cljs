@@ -10,7 +10,10 @@
     [label column operation variable]
   Object
   (toString [_]
-    (str column (gstr/urlEncode operation) variable)))
+    (let [base (str column (gstr/urlEncode operation) variable)]
+      (if label
+        (str label "::" base)
+        base))))
 
 (def operations
   [{:id 1 :symbol "="  :label "Equal To"                 :function =}

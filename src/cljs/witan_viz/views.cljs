@@ -19,6 +19,12 @@
 (.onMessage pym "get-location" (fn [args]
                                  (.sendMessage pym "location" (str (.. js/window -location)))))
 
+(.onMessage pym "open-settings" (fn [args]
+                                  (re-frame/dispatch [:open-settings])))
+
+(.onMessage pym "close-settings" (fn [args]
+                                   (re-frame/dispatch [:close-settings])))
+
 (defn re-draw
   [_]
   (let [el (.getElementById js/document "vizapp")
