@@ -6,8 +6,8 @@
             [witan-viz.data :refer [send-ready-message!]]))
 
 (defn view
-  [args pym]
-  (fn [{:keys [data args]} pym]
+  [_ _]
+  (fn [_ pym]
     (r/create-class
      {:component-did-mount
       (fn [this]
@@ -15,7 +15,7 @@
          pym
          (.toString (.-offsetHeight (.getElementById js/document "vizapp")))))
       :reagent-render
-      (fn []
+      (fn [{:keys [data args] :as params}]
         (let [{:keys [dataset]} args
               ds (if (and dataset (contains? data dataset))
                    (get data dataset)
