@@ -70,7 +70,8 @@
       :settings-open? false
       :style     (get-style qd)
       :filters   filters
-      :args      (get-args qd)}))
+      :args      (get-args qd)
+      :url       url}))
   ([]
    (make-db (.-location js/window))))
 
@@ -92,4 +93,5 @@
         (get-data (.get qd "data") {:filters new-filters})
         (assoc db
                :filters new-filters
-               :args    args)))))
+               :args    args
+               :url     (str (.. js/window -location -origin) url))))))

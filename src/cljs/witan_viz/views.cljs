@@ -11,19 +11,21 @@
             [witan-viz.views.lineplot :as lineplot]))
 
 (def     pym (.Child js/pym))
+(defonce ll  (atom nil))
 
 (.onMessage pym "arguments" (fn [args]
                               (log/debug "Got request to reload" args)
+                              (reset! ll nil)
                               (re-frame/dispatch [:reload-db (str (.. js/window -location -origin) "?" args)])))
-
-(.onMessage pym "get-location" (fn [args]
-                                 (.sendMessage pym "location" (str (.. js/window -location)))))
 
 (.onMessage pym "open-settings" (fn [args]
                                   (re-frame/dispatch [:open-settings])))
 
 (.onMessage pym "close-settings" (fn [args]
                                    (re-frame/dispatch [:close-settings])))
+
+(.onMessage pym "toggle-settings" (fn [args]
+                                    (re-frame/dispatch [:toggle-settings])))
 
 (defn re-draw
   [_]
@@ -32,6 +34,13 @@
         h  (.-offsetHeight el)]
     (re-frame/dispatch [:force-re-draw {:width w
                                         :height h}])))
+
+(defn send-location!
+  []
+  (let [loc (:url @db/app-db)]
+    (when-not (= loc @ll)
+      (reset! ll loc)
+      (.sendMessage pym "location" loc))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -84,10 +93,12 @@
                                          [control]]])
             settings-children [(setting-widget "Filters" f/filter-dialog)]]
         [re-com/v-box
-         :class "settings"
+         :class (str "settings"
+                     (when settings? " settings-permanent")
+                     (when settings-open? " settings-open"))
          :justify :end
          :align :end
-         :children [(when (or settings? settings-open?)
+         :children [(when settings?
                       [re-com/md-icon-button
                        :md-icon-name (if settings-open? "zmdi-close" "zmdi-settings")
                        :style (if settings-open? {} {:border-radius "3px"})
@@ -112,7 +123,7 @@
                                    :children settings-children]]])]]))))
 
 (defn main-panel []
-  (let [display    (re-frame/subscribe [:display])]
+  (let [display  (re-frame/subscribe [:display])]
     (r/create-class
      {:component-will-mount
       (fn [this]
@@ -120,12 +131,14 @@
         (add-watch db/app-db :data
                    (fn [k r old new]
                      (when (get @r k)
-                       (r/force-update this)))))
+                       (r/force-update this)
+                       (send-location!)))))
       :component-will-unmount
       (fn [this])
       :component-did-mount
       (fn [this]
         (.addEventListener js/window "resize" re-draw)
+        (send-location!)
         #_(.addEventListener js/window "error"  send-error))
       :reagent-render
       (fn []

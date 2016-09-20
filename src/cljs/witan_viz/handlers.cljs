@@ -64,6 +64,12 @@
    (assoc db :settings-open? false)))
 
 (re-frame/reg-event-db
+ :toggle-settings
+ (fn  [db [_ msg]]
+   (log/info "Toggling settings window...")
+   (update db :settings-open? not)))
+
+(re-frame/reg-event-db
  :update-filter
  (fn [{:keys [filters] :as db} [_ old key value]]
    (log/info "Update filter" old "key" key "value" value)

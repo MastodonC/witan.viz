@@ -11,7 +11,8 @@
     (-> db
         (dissoc :settings-open?)
         (dissoc :settings?)
-        (dissoc :filters)))))
+        (dissoc :filters)
+        (dissoc :url)))))
 
 (re-frame/reg-sub
  :settings
