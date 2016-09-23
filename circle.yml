@@ -17,4 +17,3 @@ deployment:
     commands:
       - ./build_prod.sh
       - lein upload-data witan-viz-staging
-h
