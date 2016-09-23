@@ -5,3 +5,16 @@ machine:
 test:
   override:
     - lein doo phantom test once
+
+deployment:
+  production:
+    tag: /release-.*/
+    commands:
+      - ./build_prod.sh
+      - lein upload-data witan-viz-production
+  staging:
+    branch: master
+    commands:
+      - ./build_prod.sh
+      - lein upload-data witan-viz-staging
+h
