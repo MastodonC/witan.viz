@@ -52,9 +52,9 @@
   [old key value]
   (re-frame/dispatch [:update-filter old key value]))
 
-(defn id->label
-  [coll val]
-  (some (fn [c] (when (= val (:id c)) (:label c))) coll))
+(defn id->key
+  [coll val k]
+  (some (fn [c] (when (= val (:id c)) (get c k))) coll))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -75,7 +75,7 @@
     [re-com/single-dropdown
      :choices choices
      :placeholder "Select value..."
-     :on-change #(adjust-filter filter :variable (id->label choices %))
+     :on-change #(adjust-filter filter :variable (id->key choices % :label))
      :model idx]))
 
 (defmethod variable-control
@@ -162,7 +162,7 @@
                                               :child [re-com/single-dropdown
                                                       :choices (remove #(contains? other-columns (:label %)) col-choices)
                                                       :placeholder "Select column..."
-                                                      :on-change #(adjust-filter f :column (id->label col-choices %))
+                                                      :on-change #(adjust-filter f :column (id->key col-choices % :label))
                                                       :model col-idx]]
                                              [re-com/box
                                               :class "filter-control-operation"
@@ -170,7 +170,7 @@
                                               :child [re-com/single-dropdown
                                                       :choices operations
                                                       :placeholder "Select operation..."
-                                                      :on-change #()
+                                                      :on-change #(adjust-filter f :operation (id->key operations % :symbol))
                                                       :label-fn #(str (:label %) " (" (:symbol %) ")")
                                                       :model op-idx]]
                                              [re-com/box
