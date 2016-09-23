@@ -9,7 +9,8 @@
                  [ns-tracker "0.3.0"]
                  [com.taoensso/timbre "4.7.0"]
                  [cljs-ajax "0.5.8"]
-                 [jarohen/chord "0.7.0"]
+                 [com.fasterxml.jackson.core/jackson-core "2.6.6"]
+                 [jarohen/chord "0.7.0" :exclusions [com.fasterxml.jackson.core/jackson-core]]
                  [environ "1.0.2"]
                  [witan.gateway.schema "0.1.1"]
                  [thi.ng/geom "0.0.908"]]
@@ -47,7 +48,9 @@
     :source-paths ["dev-src"]
     :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
     :plugins      [[lein-figwheel "0.5.4-3"]
-                   [lein-doo "0.1.6"]]}}
+                   [lein-doo "0.1.6"]]}
+   :data {:source-paths ["data-src"]
+          :dependencies [[amazonica "0.3.73" :exclusions [com.fasterxml.jackson.core/jackson-core]]]}}
 
   :cljsbuild
   {:builds
@@ -60,7 +63,7 @@
                     :asset-path           "js/compiled/out"
                     :source-map-timestamp true}}
 
-    {:id           "min"
+    {:id           "prod"
      :source-paths ["src/cljs"]
      :compiler     {:main            witan-viz.core
                     :output-to       "resources/public/js/compiled/app.js"
@@ -72,4 +75,12 @@
      :source-paths ["src/cljs" "test/cljs"]
      :compiler     {:output-to     "resources/public/js/compiled/test.js"
                     :main          witan-viz.runner
-                    :optimizations :none}}]})
+                    :optimizations :none}}]}
+  :release-tasks [["change" "version"
+                   "leiningen.release/bump-version" "release"]
+                  ["vcs" "commit"]
+                  ["vcs" "tag" "release-v"]
+                  ["change" "version" "leiningen.release/bump-version"]
+                  ["vcs" "commit"]
+                  ["vcs" "push"]]
+  :aliases {"upload-data" ["with-profile" "data" "run" "-m" "witan-viz.upload-data"]})

@@ -8,3 +8,4 @@ var pym = {
             "sendMessage": function () {}
         }
     }
+}
